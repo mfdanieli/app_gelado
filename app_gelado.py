@@ -373,7 +373,7 @@ st.sidebar.markdown("""---""")
 st.sidebar.markdown('## Select water quality characteristics')
 
 def get_user_data():
-    ph = st.sidebar.slider('pH', df2['ph'].min(), df2['ph'].max(), df2['ph'].median())
+    ph = st.sidebar.slider('pH', 0,12,6)#df2['ph'].min(), df2['ph'].max(), df2['ph'].median())
     temperature = st.sidebar.slider('Temperature', df2['temperature'].min(), df2['temperature'].max(), df2['temperature'].median())
     do = st.sidebar.slider('Dissolved oxygen (mg/L)', df2['do'].min(), df2['do'].max(), df2['do'].median())
     turbidity = st.sidebar.slider('Turbidity', df2['turbidity'].min(), df2['turbidity'].max(), df2['turbidity'].median())
