@@ -373,13 +373,14 @@ st.sidebar.markdown("""---""")
 st.sidebar.markdown('## Select water quality characteristics')
 
 def get_user_data():
-    ph = st.sidebar.slider('pH', 0,12,6)#df2['ph'].min(), df2['ph'].max(), df2['ph'].median())
-    temperature = st.sidebar.slider('Temperature', df2['temperature'].min(), df2['temperature'].max(), df2['temperature'].median())
-    do = st.sidebar.slider('Dissolved oxygen (mg/L)', df2['do'].min(), df2['do'].max(), df2['do'].median())
-    turbidity = st.sidebar.slider('Turbidity', df2['turbidity'].min(), df2['turbidity'].max(), df2['turbidity'].median())
-    conductivity = st.sidebar.slider('Conductivity', df2['conductivity'].min(), df2['conductivity'].max(), df2['conductivity'].median())
-    suspended_solids = st.sidebar.slider('Suspended solids', df2['suspended_solids'].min(), df2['suspended_solids'].max(), df2['suspended_solids'].median())
-    dissolved_solids = st.sidebar.slider('Dissolved solids', df2['dissolved_solids'].min(), df2['dissolved_solids'].max(), df2['dissolved_solids'].median())
+    # os valores sao min, max e med do dataset observado
+    ph = st.sidebar.slider('pH', 5.15, 8.92, 7.04)
+    temperature = st.sidebar.slider('Temperature', 7.63, 31.0, 26.7)
+    do = st.sidebar.slider('Dissolved oxygen (mg/L)', 2.33, 9.58, 6.635)
+    turbidity = st.sidebar.slider('Turbidity', 1.49, 89.8, 11.6)
+    conductivity = st.sidebar.slider('Conductivity', 5.7, 395.0, 53.6)
+    suspended_solids = st.sidebar.slider('Suspended solids', 11.0, 96.0, 11.0)
+    dissolved_solids = st.sidebar.slider('Dissolved solids', 11.0, 232.0, 38.5)
 
     # um dicionário recebe as informações acima
     user_data = {'ph': ph,
