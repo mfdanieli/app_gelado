@@ -30,6 +30,8 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn import metrics
 from sklearn.metrics import r2_score
 
+st.set_page_config(page_title='Water quality',page_icon='💦', layout='wide')
+
 # -------------------------   
 # Auxiliary functions
 # -------------------------   
@@ -53,6 +55,15 @@ def ml_error( model_name, y, yhat ):
                            'RMSE': rmse,
                            'MPE': mpe,  
                          }, index=[0] )
+
+# calculates the risks
+def health_risk(conc,rfd):
+    IR = 2.2 # L/d
+    ED = 70  # anos
+    EF = 365 # dias
+    BW = 70  # kg
+    HQ = (conc*IR*EF*ED) / (BW*365*ED)/rfd
+    return HQ
 
 # -------------------------   
 # Leitura dados > preciso deixar mais inteligente!!!
@@ -193,7 +204,6 @@ dataframe.rename(columns={"Total Mg": "Total Mn"},inplace=True)
 # display(HTML(dataframe.to_html()))
 
 
-
 # -------------------------   
 # Data cleaning
 # -------------------------
@@ -263,22 +273,27 @@ df2_chuvoso_Mn = df2_chuvoso.drop(['total_fe'],axis=1)
 # Random forest regressor 
 # -------------------------
 
-st.header('Modeling Fe and Mn during the dry and rainy')
+# st.header('Modeling Fe and Mn during the dry and rainy')
 
 # criar abas
-tab1,tab2 = st.tabs(['How to use','Model application'])
+tab1,tab2 = st.tabs(['About','Model application'])
 
 with tab1: 
     with st.container(): 
-        st.subheader('Bla')
+        # st.subheader('About')
 
-        st.markdown('## ......')
+        st.subheader('Real-time estimations of Fe and Mn concentrations in the water column of rivers')
         
-        
-        
-        
-        st.subheader('Model performance metrics: original observed data')
-
+        st.markdown('##### How to use this app')
+         
+        st.write('In the sidebar, you can alter water characteristics.')
+        st.write('In the next tab you will verify the resulting metal concentrations, during rainy and dry seasons.')
+                
+        st.markdown('##### Model information')
+                    
+        st.write('A regression technique is used to estimate total metal concentrations based on water characteristics. The random forest model was developed using monthly observed data during 2016 to 2018 in the Igarapé-Gelado basin, in the Pará State, Brazil. More details are found in ...')  
+         
+                    
         # Fe: dry
         # -------------------------
 
@@ -295,10 +310,8 @@ with tab1:
         # prediction
         yhat = rf_seca_Fe.predict(X_test)
 
-        performance = ml_error('Random forest', y_test, yhat)
+        performance_seca_Fe = ml_error('Random forest', y_test, yhat)
 
-        st.write('Model performance for Fe during the dry season:')
-        st.write(performance)
 
         # Fe: wet
         # -------------------------
@@ -315,9 +328,7 @@ with tab1:
         # prediction
         yhat = rf_chuvoso_Fe.predict(X_test)
 
-        performance = ml_error('Random forest', y_test, yhat)
-        st.write('Model performance for Fe during the rainy season:')
-        st.write(performance)
+        performance_chuvoso_Fe = ml_error('Random forest', y_test, yhat)
 
         # Mn: dry
         # -------------------------
@@ -334,9 +345,7 @@ with tab1:
         # prediction
         yhat = rf_seca_Mn.predict(X_test)
 
-        performance = ml_error('Random forest', y_test, yhat)
-        st.write('Model performance for Mn during the dry season:')
-        st.write(performance) 
+        performance_seca_Mn = ml_error('Random forest', y_test, yhat)
 
         # Mn: wet
         # -------------------------
@@ -353,24 +362,48 @@ with tab1:
         # prediction
         yhat = rf_chuvoso_Mn.predict(X_test)
 
-        performance = ml_error('Random forest', y_test, yhat)
-        st.write('Model performance for Mn during the rainy season:')
-        st.write(performance)
+        performance_chuvoso_Mn = ml_error('Random forest', y_test, yhat)
+        
+        # merging the performance metrics into a dataframe
+        performances = [performance_seca_Fe,performance_chuvoso_Fe,performance_seca_Mn,performance_chuvoso_Mn]
 
+        performances_merg = pd.concat(performances,join='inner', ignore_index=True)
+        performances_merg.index =['Fe: dry','Fe: rainy','Mn: dry','Mn: rainy']
+        st.write('Model performance:')
+        st.dataframe(performances_merg)
+
+        st.markdown('##### Risks')
+        
+        st.markdown('###### Health quotient')
+
+        st. write("""
+        > HQ = CDI/RfD
+        >
+        > RfD: 0.7 mg/kg/day for iron and 0.14 mg/kg/day for manganese
+        >
+        > CDI = (C x IR x EF x ED) / (BW x AT)
+        >
+        > C is the iron or manganese concentration in water (mg/L); 
+        > IR is the human water ingestion rate in L/day (2.2 L/day for adults);
+        > ED is the exposure duration in years (70 years for adults); 
+        > EF is the exposure frequency in days/year (365 days for adults); 
+        > BW is the average body weight in kg (70 kg for adults); 
+        > AT is the averaging time (AT = 365 × ED).
+        >
+        > The Health Index (HI) is the sum of HQ for each metal. A HI > suggests a possible risk.
+        """)
 
 # ******************
 # Barra lateral Streamlit
 # ******************  
 
-# image = Image.open('food-delivery-2.png')
+st.sidebar.markdown('# Concentrations of Iron and Manganese in rivers')
+# st.sidebar.markdown('## Water quality in rivers')
+st.sidebar.image("hidro1.gif")
 
-# st.sidebar.image(image,width=120)
-
-st.sidebar.markdown('# Fe and Mn in the Igarapé-Gelado')
-st.sidebar.markdown('## Water quality in rivers')
 st.sidebar.markdown("""---""")
 
-st.sidebar.markdown('## Select water quality characteristics')
+st.sidebar.markdown('### Select water quality characteristics')
 
 def get_user_data():
     # os valores sao min, max e med do dataset observado
@@ -406,30 +439,58 @@ prediction_chuvoso_Mn = rf_chuvoso_Mn.predict(user_input_variables)
 with tab2: 
     with st.container(): 
 
-        st.header('Model application')
+        st.subheader('Model application')
 
-        st.write('Water characteristics defined by the user:')
+        st.write('Input water characteristics:')
 
-        st.dataframe(user_input_variables)
+        # st.dataframe(user_input_variables)
+        fig = px.bar(user_input_variables,barmode='group', labels={
+                     "value": "Value",
+                     "index": " ",
+                 })
+        st.plotly_chart(fig,use_container_width=True)
 
-        st.write('Predicted concentrations (mg/L):')
-        
+        st.subheader('Predicted concentrations (mg/L):')
+
         col1,col2,col3,col4 = st.columns(4)
         with col1:
-            col1.metric('Fe_rainy', np.round(prediction_chuvoso_Fe,2),delta=str(np.round(prediction_chuvoso_Fe-0.3,2)).replace('[','').replace(']',''),delta_color="inverse")
+            col1.metric('Fe: rainy', np.round(prediction_chuvoso_Fe,2),delta=str(np.round(prediction_chuvoso_Fe-0.3,2)).replace('[','').replace(']',''),delta_color="inverse")
+
         with col2:
-            col2.metric('Fe_dry', np.round(prediction_seca_Fe,2),delta=str(np.round(prediction_seca_Fe-0.3,2)).replace('[','').replace(']',''),delta_color="inverse")
+            col2.metric('Fe: dry', np.round(prediction_seca_Fe,2),delta=str(np.round(prediction_seca_Fe-0.3,2)).replace('[','').replace(']',''),delta_color="inverse")
+
         with col3:
-            col3.metric('Mn_rainy', np.round(prediction_chuvoso_Mn,2),delta=str(np.round(prediction_chuvoso_Mn-0.1,2)).replace('[','').replace(']',''),delta_color="inverse")
+            col3.metric('Mn: rainy', np.round(prediction_chuvoso_Mn,2),delta=str(np.round(prediction_chuvoso_Mn-0.1,2)).replace('[','').replace(']',''),delta_color="inverse")
         with col4:
-            col4.metric('Mn_dry', np.round(prediction_seca_Mn,2),delta=str(np.round(prediction_seca_Mn-0.1,2)).replace('[','').replace(']',''),delta_color="inverse")
-        
+            col4.metric('Mn: dry', np.round(prediction_seca_Mn,2),delta=str(np.round(prediction_seca_Mn-0.1,2)).replace('[','').replace(']',''),delta_color="inverse")                            
+
         st.markdown("""
 > *The number accompanied by the arrow indicates the difference between the predicted and the limit concentration. 
 > The red color indicates the mg/L by which the predicted concentration is larger than the limit; the green is the contrary.*
         """)
 
+    with st.container():
+        health_index_seca = health_risk(prediction_seca_Fe,0.7) + health_risk(prediction_seca_Mn,0.14) 
+        health_index_chuvoso = health_risk(prediction_chuvoso_Fe,0.7) + health_risk(prediction_chuvoso_Mn,0.14)
+        # st.write('HI: dry',np.round(health_index_seca,2))
+        # st.write('HI: rainy',np.round(health_index_chuvoso,2))  
+        
+        health = pd.DataFrame([health_index_seca,health_index_chuvoso])
+        health.index =['Dry','Rainy']
+
+        fig = px.bar(health,labels={
+                     "value": "Health Index (HI)",
+                     "index": " ",            
+                 })
+        fig.update_layout(showlegend=False)
+        st.plotly_chart(fig)
+        st.markdown("""
+> A HI > 1 suggests a possible risk""")
+        
+        # fig = px.choropleth(locationmode="USA-states", color=[1], scope="usa")
+        # st.plotly_chart(fig,use_container_width=True)
+
             
 st.sidebar.markdown("""---""")
 
-st.sidebar.markdown('### Powered by @mfdanieli')
+st.sidebar.markdown('#### Contact: danieli@email.com')
