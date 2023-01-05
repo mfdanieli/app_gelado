@@ -473,11 +473,13 @@ with tab2:
         health_index_seca = health_risk(prediction_seca_Fe,0.7) + health_risk(prediction_seca_Mn,0.14) 
         health_index_chuvoso = health_risk(prediction_chuvoso_Fe,0.7) + health_risk(prediction_chuvoso_Mn,0.14)
       
-        col1,col2 = st.columns(2)
+        col1,col2,col3 = st.columns(3)
         with col1:
-            col1.metric('HI: dry',np.round(health_index_seca,2))
+            st.image("drink-water.png")
         with col2:
-            col2.metric('HI: rainy',np.round(health_index_chuvoso,2)) 
+            col2.metric('HI: dry',np.round(health_index_seca,2))
+        with col3:
+            col3.metric('HI: rainy',np.round(health_index_chuvoso,2)) 
         
         # health = pd.DataFrame([health_index_seca,health_index_chuvoso])
         # health.index =['Dry','Rainy']
