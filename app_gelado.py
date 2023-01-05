@@ -399,7 +399,7 @@ with tab1:
 
 st.sidebar.markdown('# Concentrations of Iron and Manganese in rivers')
 # st.sidebar.markdown('## Water quality in rivers')
-st.sidebar.image("hidro.mp4")
+st.sidebar.image("hidro.gif")
 
 st.sidebar.markdown("""---""")
 
