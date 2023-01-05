@@ -475,7 +475,7 @@ with tab2:
       
         col1,col2,col3 = st.columns(3)
         with col1:
-            st.image("drink-water.png")
+            st.image("drink-water.png",width=10)
         with col2:
             col2.metric('HI: dry',np.round(health_index_seca,2))
         with col3:
