@@ -62,7 +62,7 @@ def health_risk(conc,rfd):
     ED = 70  # anos
     EF = 365 # dias
     BW = 70  # kg
-    HQ = (conc*IR*EF*ED) / (BW*365*ED)/rfd
+    HQ = ((conc*IR*EF*ED) / (BW*365*ED))/rfd
     return HQ
 
 # -------------------------   
