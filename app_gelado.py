@@ -230,7 +230,7 @@ dataframe_new = pd.merge(df_d,dataframe,how='inner',on='ponto')
 # Data cleaning
 # -------------------------
 
-df1 = dataframe_new.copy()
+df1 = dataframe.copy()
 
 # Dropping unwanted columns 
 
