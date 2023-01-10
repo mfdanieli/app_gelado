@@ -4,6 +4,7 @@
 # Goal: using the model to predict Fe and Mn concentrations
 # Author: Danieli M. F.
 # Date: 04/01/23
+# Update: 10/01/23: perc land use as model feature
 
 # -------------------------   
 # Bibliotecas
@@ -29,6 +30,7 @@ from scipy.optimize import fsolve
 from sklearn.ensemble import RandomForestRegressor
 from sklearn import metrics
 from sklearn.metrics import r2_score
+from pxmap import px_static
 
 st.set_page_config(page_title='Water quality',page_icon='💦', layout='wide')
 
@@ -204,11 +206,31 @@ dataframe.rename(columns={"Total Mg": "Total Mn"},inplace=True)
 # display(HTML(dataframe.to_html()))
 
 
+# -------------------------  
+# NEW: Adicionando uso do solo no dataframe
+# LEITURA dos dataframes de pto x minibacia e de minibacia x porcentagens da área com cada tipo de uso
+df_a = pd.read_excel("perc_solo_miniBac_pto_qualid.xlsx",
+                   sheet_name = "gelado_ptos")
+# df_a[['Ponto','FID_catchm']]
+df_b = pd.read_excel("perc_solo_miniBac_pto_qualid.xlsx",
+                   sheet_name = "gelado_uso")
+# juntando os dataframes pelo codigo de minibacia
+df_c = pd.merge(df_a[['Ponto','FID_catchm']],df_b[['FID_catchm','PercArea','UsoTipo']],how='inner',on='FID_catchm')
+# pivot table p/ mostrar % por uso, pto e minibacia
+df_d = pd.pivot_table(df_c,index=["Ponto","FID_catchm","UsoTipo"]).unstack().reset_index()
+# arrumando nomes colunas
+df_d.columns = ['ponto','fid_catchm','forest','mining','non_forest','pasture','urban_area','water']
+# replacing Nan with 0
+df_d = df_d.fillna(0)
+# juntando com o dataframe de conc x caracteristicas agua
+dataframe_new = pd.merge(df_d,dataframe,how='inner',on='ponto')
+
+
 # -------------------------   
 # Data cleaning
 # -------------------------
 
-df1 = dataframe.copy()
+df1 = dataframe_new.copy()
 
 # Dropping unwanted columns 
 
@@ -276,7 +298,7 @@ df2_chuvoso_Mn = df2_chuvoso.drop(['total_fe'],axis=1)
 # st.header('Modeling Fe and Mn during the dry and rainy')
 
 # criar abas
-tab1,tab2 = st.tabs(['About','Model application'])
+tab1,tab2,tab3 = st.tabs(['About','Model application','Data'])
 
 with tab1: 
     with st.container(): 
@@ -495,7 +517,12 @@ with tab2:
         # fig = px.choropleth(locationmode="USA-states", color=[1], scope="usa")
         # st.plotly_chart(fig,use_container_width=True)
 
-            
+with tab3:
+    with st.container():
+        st.write('map')
+        # fig = px.scatter_mapbox(d3, lat=d3['Lat'], lon=d3['Long'],opacity=0.4)
+        # fig.update_layout(mapbox_style='carto-positron')
+        
 st.sidebar.markdown("""---""")
 
 st.sidebar.markdown('#### Contact: danieli@email.com')
