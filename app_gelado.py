@@ -230,11 +230,12 @@ dataframe_new = pd.merge(df_d,dataframe,how='inner',on='ponto')
 # Data cleaning
 # -------------------------
 
-df1 = dataframe.copy()
+df1 = dataframe_new.copy()
 
 # Dropping unwanted columns 
 
-df1 = df1.drop(['Kd_Cu','Kd_Fe','Kd_Mn','Kd_mean','Dissolved Cu','ponto','Dissolved Fe','Dissolved Mn'], axis=1) 
+df1 = df1.drop(['Kd_Cu','Kd_Fe','Kd_Mn','Kd_mean','Dissolved Cu','Dissolved Fe','Dissolved Mn','fid_catchm'], axis=1) 
+# df1 = df1.drop(['Kd_Cu','Kd_Fe','Kd_Mn','Kd_mean','Dissolved Cu','Dissolved Fe','Dissolved Mn'], axis=1) 
 
 # Fomatting column names
 
@@ -320,7 +321,7 @@ with tab1:
         # -------------------------
 
         # dataframe of interest
-        X = df2_seca_Fe.drop(['season','total_fe'],axis=1)
+        X = df2_seca_Fe.drop(['season','total_fe','ponto'],axis=1)
         y = df2_seca_Fe['total_fe']
 
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.4, random_state=101)
@@ -339,7 +340,7 @@ with tab1:
         # -------------------------
 
         # dataframe of interest
-        X = df2_chuvoso_Fe.drop(['season','total_fe'],axis=1)
+        X = df2_chuvoso_Fe.drop(['season','total_fe','ponto'],axis=1)
         y = df2_chuvoso_Fe['total_fe']
 
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.4, random_state=101)
@@ -356,7 +357,7 @@ with tab1:
         # -------------------------
 
         # dataframe of interest 
-        X = df2_seca_Mn.drop(['season','total_mn'],axis=1)
+        X = df2_seca_Mn.drop(['season','total_mn','ponto'],axis=1)
         y = df2_seca_Mn['total_mn']
 
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.4, random_state=101)
@@ -373,7 +374,7 @@ with tab1:
         # -------------------------
 
         # dataframe of interest
-        X = df2_chuvoso_Mn.drop(['season','total_mn'],axis=1)
+        X = df2_chuvoso_Mn.drop(['season','total_mn','ponto'],axis=1)
         y = df2_chuvoso_Mn['total_mn']
 
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.4, random_state=101)
@@ -427,6 +428,9 @@ st.sidebar.markdown("""---""")
 
 st.sidebar.markdown('### Select water quality characteristics')
 
+# para fazer o trade-off entre pasto e floresta:
+outros_usos_tot = df2['mining'].mean()+df2['non_forest'].mean()+df2['urban_area'].mean()+df2['water'].mean() # % total de uso fora pasto e floresta
+
 def get_user_data():
     # os valores sao min, max e med do dataset observado
     ph = st.sidebar.slider('pH', 5.15, 8.92, 7.04)
@@ -436,15 +440,28 @@ def get_user_data():
     conductivity = st.sidebar.slider('Conductivity', 5.7, 395.0, 53.6)
     suspended_solids = st.sidebar.slider('Suspended solids', 11.0, 96.0, 11.0)
     dissolved_solids = st.sidebar.slider('Dissolved solids', 11.0, 232.0, 38.5)
-
+    st.sidebar.markdown('Tradeoff between forest and pasture:')
+    forest = st.sidebar.slider('Select forest cover percentage', 0.01, (100.0-outros_usos_tot), 50.0) #df2['forest'].median()
+    mining = df2['mining'].mean()
+    non_forest = df2['non_forest'].mean()
+    pasture = 100 - forest - outros_usos_tot 
+    urban_area = df2['urban_area'].mean()
+    water = df2['water'].mean()
+        
     # um dicionário recebe as informações acima
-    user_data = {'ph': ph,
+    user_data = {'forest': forest, 
+                 'mining': mining, 
+                 'non_forest': non_forest, 
+                 'pasture': pasture, 
+                 'urban_area': urban_area,
+                 'water': water,
+                 'ph': ph,
                  'temperature': temperature,
                  'do': do,
                  'turbidity': turbidity,
                  'conductivity': conductivity,
                  'suspended_solids': suspended_solids,
-                 'dissolved_solids': dissolved_solids
+                 'dissolved_solids': dissolved_solids,
                  }
     features = pd.DataFrame(user_data,index=[0])
   
@@ -452,6 +469,7 @@ def get_user_data():
 
 # form the new input dataset (X_test)
 user_input_variables = get_user_data()
+
 # New prediction
 prediction_seca_Fe = rf_seca_Fe.predict(user_input_variables)
 prediction_seca_Mn = rf_seca_Mn.predict(user_input_variables)
