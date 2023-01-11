@@ -18,7 +18,9 @@ import plotly.express as px
 import plotly.io as pio
 import inflection
 import streamlit as st
-
+import folium
+        
+from streamlit_folium import folium_static        
 from IPython.display     import display, HTML
 from sklearn.model_selection import train_test_split
 from sklearn import linear_model
@@ -299,7 +301,7 @@ df2_chuvoso_Mn = df2_chuvoso.drop(['total_fe'],axis=1)
 # st.header('Modeling Fe and Mn during the dry and rainy')
 
 # criar abas
-tab1,tab2,tab3 = st.tabs(['About','Model application','Data'])
+tab1,tab2,tab3,tab4 = st.tabs(['About','Model Information','Data','Model Application'])
 
 with tab1: 
     with st.container(): 
@@ -309,13 +311,46 @@ with tab1:
         
         st.markdown('##### How to use this app')
          
-        st.write('In the sidebar, you can alter water characteristics.')
-        st.write('In the next tab you will verify the resulting metal concentrations, during rainy and dry seasons.')
-                
-        st.markdown('##### Model information')
-                    
-        st.write('A regression technique is used to estimate total metal concentrations based on water characteristics. The random forest model was developed using monthly observed data during 2016 to 2018 in the Igarapé-Gelado basin, in the Pará State, Brazil. More details are found in ...')  
-         
+        st.write('In the sidebar, you can alter water characteristics and percentage of forest cover in the basin. A tradeoff is set between forest and pasture occupation (if forest cover increases, it is assumed that it replaces the pasture; the other land uses are kept as constant).')
+        st.write('In the tab ***"Model Application"*** you will verify the resulting metal concentrations, during rainy and dry seasons, as well as the associated risk to human health due to water ingestion.')
+
+        st.write('This risk is calculated as a Health quotient:')
+    
+
+        st. write("""
+        > HQ = CDI/RfD
+        >
+        > RfD: 0.7 mg/kg/day for iron and 0.14 mg/kg/day for manganese
+        >
+        > CDI = (C x IR x EF x ED) / (BW x AT)
+        >
+        > C is the iron or manganese concentration in water (mg/L); 
+        > IR is the human water ingestion rate in L/day (2.2 L/day for adults);
+        > ED is the exposure duration in years (70 years for adults); 
+        > EF is the exposure frequency in days/year (365 days for adults); 
+        > BW is the average body weight in kg (70 kg for adults); 
+        > AT is the averaging time (AT = 365 × ED).
+        >
+        > The Health Index (HI) is the sum of HQ for each metal. A HI > suggests a possible risk for non-carcinogenic effects.
+        """)
+        
+        st.write('The tab ***"Data"*** summarizes the observed data used for model development, while the tab ***"Model information"*** presents the model performance (under developmnent).')
+        
+            
+
+# ******************
+# Barra lateral Streamlit
+# ******************  
+
+st.sidebar.markdown('# Concentrations of Iron and Manganese in rivers')
+# st.sidebar.markdown('## Water quality in rivers')
+st.sidebar.image("hidro.gif")
+
+st.sidebar.markdown("""---""")
+
+with tab2:
+    with st.container():
+        st.write('A regression technique is used to estimate total metal concentrations based on water characteristics. The random forest model was developed using monthly observed data during 2016 to 2018 in the Igarapé-Gelado basin, in the Pará State, Brazil. More details are found in XXXX.')  
                     
         # Fe: dry
         # -------------------------
@@ -395,36 +430,10 @@ with tab1:
         st.write('Model performance:')
         st.dataframe(performances_merg)
 
-        st.markdown('##### Risks')
         
-        st.markdown('###### Health quotient')
+        # -----------
 
-        st. write("""
-        > HQ = CDI/RfD
-        >
-        > RfD: 0.7 mg/kg/day for iron and 0.14 mg/kg/day for manganese
-        >
-        > CDI = (C x IR x EF x ED) / (BW x AT)
-        >
-        > C is the iron or manganese concentration in water (mg/L); 
-        > IR is the human water ingestion rate in L/day (2.2 L/day for adults);
-        > ED is the exposure duration in years (70 years for adults); 
-        > EF is the exposure frequency in days/year (365 days for adults); 
-        > BW is the average body weight in kg (70 kg for adults); 
-        > AT is the averaging time (AT = 365 × ED).
-        >
-        > The Health Index (HI) is the sum of HQ for each metal. A HI > suggests a possible risk.
-        """)
 
-# ******************
-# Barra lateral Streamlit
-# ******************  
-
-st.sidebar.markdown('# Concentrations of Iron and Manganese in rivers')
-# st.sidebar.markdown('## Water quality in rivers')
-st.sidebar.image("hidro.gif")
-
-st.sidebar.markdown("""---""")
 
 st.sidebar.markdown('### Select water quality characteristics')
 
@@ -475,8 +484,61 @@ prediction_seca_Fe = rf_seca_Fe.predict(user_input_variables)
 prediction_seca_Mn = rf_seca_Mn.predict(user_input_variables)
 prediction_chuvoso_Fe = rf_chuvoso_Fe.predict(user_input_variables)
 prediction_chuvoso_Mn = rf_chuvoso_Mn.predict(user_input_variables)
+
+
+with tab3:
+    with st.container():
+        st.title('Median of observed Fe and Mn concentrations per monitoring point')
+        # MEDIANA POR PONTO (todo o dataset observado)
+        medianas_tudo = df1[['ponto','total_fe','total_mn']].groupby('ponto').median().reset_index()
+        # juntando com coord dos pontos
+        coord = pd.read_csv("coord_ptos.csv",sep=';')
+        Y = pd.to_numeric(coord['Lat'], errors='coerce')#
+        X = coord['Long']
+        Local = coord['Ponto']
+        df = pd.concat([X, Y, medianas_tudo], axis=1)
+        df.columns = ['lat','lon','ponto','total_fe','total_mn']
+        st.dataframe(df)
+
+        map_fe = folium.Map(location=[-6, -50],tiles="OpenStreetMap", zoom_start=11)
+        #design for the app
+        st.markdown('## Total Fe')
         
-with tab2: 
+        # add marker one by one on the map
+        for i in range(0,len(df)):
+           folium.Circle(
+              location=[df.iloc[i]['lat'], df.iloc[i]['lon']],
+              popup=df.iloc[i][['ponto','total_fe']],
+              radius=float(df.iloc[i]['total_fe'])*200,
+              color='crimson',
+              fill=True,
+              fill_color='crimson',
+              fillopacity=0.9
+           ).add_to(map_fe)
+        # Show the map
+        folium_static(map_fe,width=800,height=300)
+        
+        map_mn = folium.Map(location=[-6, -50],tiles="OpenStreetMap", zoom_start=11)
+        #design for the app
+        st.markdown('## Total Mn')
+        
+        # add marker one by one on the map
+        for i in range(0,len(df)):
+           folium.Circle(
+              location=[df.iloc[i]['lat'], df.iloc[i]['lon']],
+              popup=df.iloc[i][['ponto','total_mn']],
+              radius=float(df.iloc[i]['total_mn'])*5000,
+              color='crimson',
+              fill=True,
+              fill_color='crimson',
+              fillopacity=0.9
+           ).add_to(map_mn)
+        # Show the map
+        folium_static(map_mn,width=800,height=300)
+
+    
+    
+with tab4: 
     with st.container(): 
 
         st.subheader('Model application')
@@ -484,8 +546,10 @@ with tab2:
         st.write('Input water characteristics:')
 
         # st.dataframe(user_input_variables)
-        fig = px.bar(user_input_variables,barmode='group', labels={
-                     "value": "Value",
+        fig = px.bar(user_input_variables,barmode='group', color_discrete_sequence=[
+                     "forestgreen","coral", "darkcyan", "firebrick", "dimgray", "blue",
+                     "violet","hotpink","blueviolet","crimson","slateblue","indigo", "midnightblue"],
+                     labels={"value": "Value",
                      "index": " ",
                  })
         st.plotly_chart(fig,use_container_width=True)
@@ -495,7 +559,7 @@ with tab2:
         col1,col2,col3,col4 = st.columns(4)
         with col1:
             col1.metric('Fe: rainy', np.round(prediction_chuvoso_Fe,2),delta=str(np.round(prediction_chuvoso_Fe-0.3,2)).replace('[','').replace(']',''),delta_color="inverse")
-
+            
         with col2:
             col2.metric('Fe: dry', np.round(prediction_seca_Fe,2),delta=str(np.round(prediction_seca_Fe-0.3,2)).replace('[','').replace(']',''),delta_color="inverse")
 
@@ -515,7 +579,7 @@ with tab2:
       
         col1,col2,col3 = st.columns(3)
         with col1:
-            st.image("drink-water.png",width=50)
+            st.image("drink-water.png",width=70)
         with col2:
             col2.metric('HI: dry',np.round(health_index_seca,2))
         with col3:
@@ -535,12 +599,8 @@ with tab2:
         # fig = px.choropleth(locationmode="USA-states", color=[1], scope="usa")
         # st.plotly_chart(fig,use_container_width=True)
 
-with tab3:
-    with st.container():
-        st.write('map')
-        # fig = px.scatter_mapbox(d3, lat=d3['Lat'], lon=d3['Long'],opacity=0.4)
-        # fig.update_layout(mapbox_style='carto-positron')
-        
+
+       
 st.sidebar.markdown("""---""")
 
 st.sidebar.markdown('#### Contact: danieli@email.com')
