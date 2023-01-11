@@ -19,7 +19,8 @@ import plotly.io as pio
 import inflection
 import streamlit as st
 import folium
-        
+import geopandas as gpd
+
 from streamlit_folium import folium_static        
 from IPython.display     import display, HTML
 from sklearn.model_selection import train_test_split
@@ -536,7 +537,38 @@ with tab3:
         # Show the map
         folium_static(map_mn,width=800,height=300)
 
-    
+
+        # Land use map
+        with st.container():
+            st.markdown('## Land use map in the Gelado-Igarapé basin (year 2017)')
+            
+            uso_solo = gpd.read_file('miniBac.geojson')
+            uso_dado = uso_solo[[ 'fid_2','DN']]
+            m = folium.Map(location=[-6, -50], zoom_start=11)
+            
+            # cores = ['green','darkcyan','coral','grey','firebrick','deepskyblue']
+            c = folium.Choropleth(
+                geo_data=uso_solo,
+                name="choropleth",
+                data=uso_dado,
+                columns=['fid_2','DN'],
+                key_on='feature.properties.fid_2',
+                fill_color="BuPu",
+                fill_opacity=0.7,
+                line_opacity=0.2
+            ).add_to(m)
+
+            # # para nao mostrar a legenda:
+            # for key in c._children:
+            #     if key.startswith('color_map'):
+            #         del(c._children[key]) 
+            # c.add_to(m)
+
+            st.write('3: Forest - 11: Non Forest Natural Formation - 15: Pasture - 24: Urban area - 30: Mining - 33: Water')#- 39: Agriculture - 41: Other')
+            folium.LayerControl().add_to(m)
+
+            folium_static(m,width=800,height=300)
+
     
 with tab4: 
     with st.container(): 
@@ -559,19 +591,35 @@ with tab4:
         col1,col2,col3,col4 = st.columns(4)
         with col1:
             col1.metric('Fe: rainy', np.round(prediction_chuvoso_Fe,2),delta=str(np.round(prediction_chuvoso_Fe-0.3,2)).replace('[','').replace(']',''),delta_color="inverse")
-            
+        
+        
         with col2:
             col2.metric('Fe: dry', np.round(prediction_seca_Fe,2),delta=str(np.round(prediction_seca_Fe-0.3,2)).replace('[','').replace(']',''),delta_color="inverse")
-
+            
+            
         with col3:
             col3.metric('Mn: rainy', np.round(prediction_chuvoso_Mn,2),delta=str(np.round(prediction_chuvoso_Mn-0.1,2)).replace('[','').replace(']',''),delta_color="inverse")
+            
+            
         with col4:
-            col4.metric('Mn: dry', np.round(prediction_seca_Mn,2),delta=str(np.round(prediction_seca_Mn-0.1,2)).replace('[','').replace(']',''),delta_color="inverse")                            
-
+            col4.metric('Mn: dry', np.round(prediction_seca_Mn,2),delta=str(np.round(prediction_seca_Mn-0.1,2)).replace('[','').replace(']',''),delta_color="inverse")   
+            
+    with st.container():
+            
         st.markdown("""
 > *The number accompanied by the arrow indicates the difference between the predicted and the limit concentration. 
 > The red color indicates the mg/L by which the predicted concentration is larger than the limit; the green is the contrary.*
         """)
+        # resultados_vs_limite = [[float(prediction_chuvoso_Fe),0.3],[float(prediction_seca_Fe),0.3],
+        #                         [float(prediction_chuvoso_Mn),0.1],[float(prediction_seca_Mn),0.1]]
+        # dados = pd.DataFrame([[float(prediction_seca_Mn),0.1]], columns=['Predicted','Limit'])
+        # fig = px.bar(resultados_vs_limite,barmode='overlay',opacity=0.9, text_auto=True,
+        #  labels={"value": " ",
+        #  "index": " ",
+        # })
+        # # fig.update_layout(showlegend=False)
+        # st.plotly_chart(fig,use_container_width=True)
+            
 
     with st.container():
         health_index_seca = health_risk(prediction_seca_Fe,0.7) + health_risk(prediction_seca_Mn,0.14) 
